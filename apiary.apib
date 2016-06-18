@@ -13,10 +13,10 @@ This is a test/prototype API all about zoo animals, so I can try out https://api
     + Attributes
         - animals (array[Animal])
 
-## Animals Resource [/animals/{type}]
+## Animals Resource [/animals/{name}]
 
 + Parameters
-  + type: `Monkey` - The unique type of animal
+  + name: `Malcom` - The unique type of animal
 
 ### GET
 
@@ -43,12 +43,10 @@ This is a test/prototype API all about zoo animals, so I can try out https://api
 
 ## Animal (object)
 
-- type: `Monkey` (string, required) - The unique ID of the place.
-- name: `Battery Harris` (string, required) - Name of the place.
-- lat: `40.712017` (number, required) - Latitude as a decimal.
-- lon: `-73.950995` (number, required) - Longitude as a decimal.
+- name: `Malcom` (string, required) - Unique name of the animal.
+- type: `Monkey` (string, required) - The type of animal.
 - status (enum[string])
-  - pending - They haven't finished their public profile or whatever.
-  - active - Good as gold.
-  - closed - This place doesn't exist.
-- created_at: `2015-01-07T14:03:43Z` (string, required) - ISO8601 date and time of when the rider was created.
+  - wild - The animal is currently in the wild. 
+  - transport - The animal is in transport to the zoo.
+  - zoo - The animal is in the zoo.
+- created_at: `2015-01-07T14:03:43Z` (string, required) - ISO8601 date and time of when the animal was created.
