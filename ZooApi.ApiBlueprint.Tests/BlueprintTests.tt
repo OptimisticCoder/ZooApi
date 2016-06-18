@@ -1,0 +1,130 @@
+﻿<#@ template debug="true" hostspecific="true" language="C#" #>
+<#@ assembly name="System.Core" #>
+<#@ assembly name="System" #>
+<#@ assembly name="Newtonsoft.Json.dll" #>
+<#@ assembly name="$(ProjectDir)bin\\Debug\\ZooApi.ApiBlueprint.Tests.dll" #>
+<#@ import namespace="System.Linq" #>
+<#@ import namespace="System.Collections.Generic" #>
+<#@ import namespace="Newtonsoft.Json" #>
+<#@ import namespace="Newtonsoft.Json.Linq" #>
+<#@ import namespace="System.IO" #>
+<#@ import namespace="System.Net" #>
+<#@ import namespace="ZooApi.ApiBlueprint.Tests.Models" #>
+<#@ output extension=".cs" #>
+<#
+	var h = Host.ResolvePath("apiary.json");
+	var raw = File.ReadAllText(h);
+	var json = JObject.Parse(raw);
+	var elems = json["ast"]["content"];
+
+    var cats = new List<Category>();
+    foreach(var elem in elems)
+    {
+        if ((string)elem["element"] == "category" && elem["attributes"] != null)
+        {
+            var cat = new Category
+            {
+                Name = (string)elem["attributes"]["name"],
+                Resources = new List<Resource>()
+            };
+                    foreach(var c in elem["content"])
+                    {
+                        var pa = new Dictionary<String, String>();
+                        foreach (var p in c["parameters"])
+                        {
+                            pa.Add((string)p["name"], (string)p["example"]);
+                        }
+                        foreach (var a in c["actions"])
+                        {
+                            var responses = new List<Response>();
+                            foreach (var e in a["examples"])
+                            {
+                                foreach (var r in e["responses"])
+                                {
+                                    Int32 responseCode = 0;
+                                    Int32.TryParse((string)r["name"], out responseCode);
+
+                                    var response = new Response
+                                    {
+                                        StatusCode = (HttpStatusCode)responseCode,
+                                        Headers = new Dictionary<string,string>()
+                                    };
+                                    foreach(var rh in r["headers"])
+                                    {
+                                        response.Headers.Add((string)rh["name"], (string)rh["value"]);
+                                    }
+                                    responses.Add(response);
+                                }
+                            }
+                            String uri = String.Empty;
+                            if (c["uriTemplate"] != null)
+                            {
+                                uri = (string)c["uriTemplate"];
+                                foreach(var p in pa)
+                                {
+                                    uri = uri.Replace("{" + p.Key + "}", p.Value);
+                                }
+                            }
+                            cat.Resources.Add(new Resource
+                            {
+                                Name = ((string)c["name"]).Replace(" ", String.Empty),
+                                UriTemplate = uri,
+                                Method = (string)a["method"],
+                                ExpectedResponses = responses
+                            });
+                        }
+                    }
+
+
+
+
+            cats.Add(cat);
+        }
+    }
+#>using System;
+using System.Linq;
+using System.IO;
+using System.Net;
+using System.Net.Http;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Newtonsoft.Json;
+
+namespace ZooApi.ApiBlueprint.Tests
+{
+	/// <summary>
+	/// <#=(string)json["ast"]["name"] #> Tests
+	/// </summary>
+    [TestClass]
+    public class BlueprintTests
+    {
+<#foreach(var cat in cats) { 
+	foreach(var resource in cat.Resources) {
+		var expectedResponse = resource.ExpectedResponses.First();
+#>
+
+		[TestMethod]
+        public void <#=cat.Name #>_<#=resource.Method #>_<#=resource.Name #>()
+        {
+<# if(resource.Method == "DELETE") { #>
+			var httpResponse = HttpHelper.DoRequest(HttpMethod.Delete, "application/json", "<#=resource.UriTemplate #>").Result;
+			Assert.IsTrue(httpResponse.StatusCode == (HttpStatusCode)<#=(int)expectedResponse.StatusCode #>);
+<# } else if(resource.Method == "GET") { #>
+			var httpResponse = HttpHelper.DoRequest(HttpMethod.Get, "application/json", "<#=resource.UriTemplate #>").Result;
+
+			// check to make sure the returned status code is as expected.
+			Assert.IsTrue(httpResponse.StatusCode == (HttpStatusCode)<#=(int)expectedResponse.StatusCode #>);
+
+			// check the documented headers in the response are present.<# foreach(var hh in expectedResponse.Headers.Keys) { #>			
+			Assert.IsTrue(httpResponse.Content.Headers.Where(h => h.Key == "<#=hh #>" && String.Join("; ", h.Value) == "<#=expectedResponse.Headers[hh] #>").Count() == 1);
+<# } #>
+<# } else { #>
+            Assert.Inconclusive();
+<# } #>
+        } 
+<# } } #>
+	}
+}
+
+/*
+<#=raw #>
+*/

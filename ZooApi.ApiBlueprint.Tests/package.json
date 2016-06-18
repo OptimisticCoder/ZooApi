@@ -1,0 +1,7 @@
+{
+  "name": "ZooApi.ApiBlueprint.Tests",
+  "version": "1.0.0",
+  "devDependencies": {
+    "drafter": "~0.2.8",
+  }
+}
