@@ -72,13 +72,21 @@
     </Compile>
     <Compile Include="HttpHelper.cs" />
     <Compile Include="Models\Category.cs" />
+    <Compile Include="Models\Request.cs" />
     <Compile Include="Models\Resource.cs" />
     <Compile Include="Models\Response.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="TestBuilder\ApiTest.cs" />
+    <Compile Include="TestBuilder\AstAction.cs" />
+    <Compile Include="TestBuilder\AstResource.cs" />
+    <Compile Include="TestBuilder\AstResourceGroup.cs" />
+    <Compile Include="TestBuilder\AstFile.cs" />
     <Compile Include="UnitTest1.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="App.config" />
+    <None Include="App.config">
+      <SubType>Designer</SubType>
+    </None>
     <None Include="BlueprintTests.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>BlueprintTests.cs</LastGenOutput>

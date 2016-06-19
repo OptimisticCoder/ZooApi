@@ -53,16 +53,16 @@
                           .FirstOrDefault();
         }
 
-        public void PutAnimal(String id, Animal animal)
+        public Animal PutAnimal(String id, Animal animal)
         {
             var exists = animals.Where(a => a.name.ToLower() == id).FirstOrDefault();
             if (exists == null)
-                return;
+                return null;
 
             exists.name = animal.name;
             exists.status = animal.status;
 
-            // ...
+            return exists;
         }
 
         public void DeleteAnimal(String id)

@@ -13,5 +13,6 @@
         public String UriTemplate { get; set; }
         public String Method { get; set; }
         public List<Response> ExpectedResponses { get; set; }
+        public List<Request> ExampleRequests { get; set; }
     }
 }

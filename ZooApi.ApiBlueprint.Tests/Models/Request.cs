@@ -5,13 +5,9 @@
     using System.Linq;
     using System.Text;
     using System.Threading.Tasks;
-    using System.Net;
-    using System.Net.Http;
 
-    public class Response
+    public class Request
     {
-        public HttpStatusCode StatusCode { get; set; }
-
         public Dictionary<String, String> Headers { get; set; }
 
         public String Body { get; set; }

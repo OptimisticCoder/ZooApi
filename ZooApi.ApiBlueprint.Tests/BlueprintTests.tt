@@ -37,6 +37,7 @@
                         foreach (var a in c["actions"])
                         {
                             var responses = new List<Response>();
+                            var requests = new List<Request>();
                             foreach (var e in a["examples"])
                             {
                                 foreach (var r in e["responses"])
@@ -47,7 +48,8 @@
                                     var response = new Response
                                     {
                                         StatusCode = (HttpStatusCode)responseCode,
-                                        Headers = new Dictionary<string,string>()
+                                        Headers = new Dictionary<string,string>(),
+                                        Body = (string)r["body"]
                                     };
                                     foreach(var rh in r["headers"])
                                     {
@@ -55,7 +57,21 @@
                                     }
                                     responses.Add(response);
                                 }
+                                foreach (var r in e["requests"])
+                                {
+                                    var request = new Request
+                                    {
+                                        Headers = new Dictionary<string, string>(),
+                                        Body = (string)r["body"]
+                                    };
+                                    foreach (var rh in r["headers"])
+                                    {
+                                        request.Headers.Add((string)rh["name"], (string)rh["value"]);
+                                    }
+                                    requests.Add(request);
+                                }
                             }
+
                             String uri = String.Empty;
                             if (c["uriTemplate"] != null)
                             {
@@ -70,18 +86,17 @@
                                 Name = ((string)c["name"]).Replace(" ", String.Empty),
                                 UriTemplate = uri,
                                 Method = (string)a["method"],
-                                ExpectedResponses = responses
+                                ExpectedResponses = responses,
+                                ExampleRequests = requests
                             });
                         }
                     }
-
-
-
 
             cats.Add(cat);
         }
     }
 #>using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.IO;
 using System.Net;
@@ -100,23 +115,55 @@ namespace ZooApi.ApiBlueprint.Tests
 <#foreach(var cat in cats) { 
 	foreach(var resource in cat.Resources) {
 		var expectedResponse = resource.ExpectedResponses.First();
+		var exampleRequest = resource.ExampleRequests.FirstOrDefault();
 #>
 
 		[TestMethod]
         public void <#=cat.Name #>_<#=resource.Method #>_<#=resource.Name #>()
         {
 <# if(resource.Method == "DELETE") { #>
-			var httpResponse = HttpHelper.DoRequest(HttpMethod.Delete, "application/json", "<#=resource.UriTemplate #>").Result;
+			// create dictionary of request headers.
+            var headers = new Dictionary<String, String>();
+<# if(exampleRequest != null) foreach(var er in exampleRequest.Headers.Keys) { #>
+			headers.Add("<#=er #>", "<#=exampleRequest.Headers[er] #>");
+<# } #>
+
+			// make the DELETE request.
+			var httpResponse = HttpHelper.DoRequest(HttpMethod.Delete, "<#=resource.UriTemplate #>", headers, "<#=exampleRequest != null ? exampleRequest.Body : "" #>").Result;
+
+			// check to make sure the returned http status code is <#=(int)expectedResponse.StatusCode #>.
 			Assert.IsTrue(httpResponse.StatusCode == (HttpStatusCode)<#=(int)expectedResponse.StatusCode #>);
 <# } else if(resource.Method == "GET") { #>
-			var httpResponse = HttpHelper.DoRequest(HttpMethod.Get, "application/json", "<#=resource.UriTemplate #>").Result;
+			// create dictionary of request headers.
+            var headers = new Dictionary<String, String>();
+<# if(exampleRequest != null) foreach(var er in exampleRequest.Headers.Keys) { #>
+			headers.Add("<#=er #>", "<#=exampleRequest.Headers[er] #>");
+<# } #>
 
-			// check to make sure the returned status code is as expected.
+			// make the GET request.
+			var httpResponse = HttpHelper.DoRequest(HttpMethod.Get, "<#=resource.UriTemplate #>", headers, "<#=exampleRequest != null ? exampleRequest.Body : "" #>").Result;
+
+			// check to make sure the returned http status code is <#=(int)expectedResponse.StatusCode #>.
 			Assert.IsTrue(httpResponse.StatusCode == (HttpStatusCode)<#=(int)expectedResponse.StatusCode #>);
 
 			// check the documented headers in the response are present.<# foreach(var hh in expectedResponse.Headers.Keys) { #>			
 			Assert.IsTrue(httpResponse.Content.Headers.Where(h => h.Key == "<#=hh #>" && String.Join("; ", h.Value) == "<#=expectedResponse.Headers[hh] #>").Count() == 1);
 <# } #>
+<# } else if(resource.Method == "PUT") { #>
+			// create dictionary of request headers.
+            var headers = new Dictionary<String, String>();
+<# if(exampleRequest != null) foreach(var er in exampleRequest.Headers.Keys) { #>
+			headers.Add("<#=er #>", "<#=exampleRequest.Headers[er] #>");
+<# } #>
+
+			// prepare some body content to send, based on examples in the documentation.
+			String body="<#=exampleRequest != null ? exampleRequest.Body.Replace("\"", "\\\"") : "" #>";
+
+			// make the PUT request.
+			var httpResponse = HttpHelper.DoRequest(HttpMethod.Put, "<#=resource.UriTemplate #>", headers, body).Result;
+
+			// check to make sure the returned http status code is <#=(int)expectedResponse.StatusCode #>.
+			Assert.IsTrue(httpResponse.StatusCode == (HttpStatusCode)<#=(int)expectedResponse.StatusCode #>);
 <# } else { #>
             Assert.Inconclusive();
 <# } #>
